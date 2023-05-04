@@ -1,0 +1,68 @@
+project_name: nsxt_exporter
+
+builds:
+  - id: binary
+    dir: .
+    main: ./main.go
+    binary: nsxt_exporter
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/prometheus/common/version.Version={{.Version}}
+      - -X github.com/prometheus/common/version.Revision={{.FullCommit}}
+      - -X github.com/prometheus/common/version.Branch={{.Branch}}
+      - -X github.com/prometheus/common/version.BuildUser={{.Env.USER}}
+      - -X github.com/prometheus/common/version.BuildDate={{.Date}}
+      - -X code.cloudfoundry.org/cli/version/binaryVersion={{.Version}}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+    goarm: [5,6,7]
+
+archives:
+  - id: archives
+    builds: [binary]
+    format: "tar.gz"
+    name_template: '{{ .ProjectName }}_{{ .Version }}.{{ .Os }}-{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
+    wrap_in_directory: true
+    files:
+      - LICENSE
+    format_overrides:
+      - goos: windows
+        format: zip
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+    - 'docs'
+    - '\.md'
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+dockers:
+  - goos: linux
+    goarch: amd64
+    dockerfile: ./Dockerfile
+    image_templates:
+      - "orangeopensource/nsxt-exporter:latest"
+      - "orangeopensource/nsxt-exporter:{{ .Tag }}"
+      - "orangeopensource/nsxt-exporter:v{{ .Major }}"
+      - "orangeopensource/nsxt-exporter:v{{ .Major }}.{{ .Minor }}"
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+
+release:
+  prerelease: auto
+  name_template: '{{.Tag}}'

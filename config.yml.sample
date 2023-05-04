@@ -1,0 +1,42 @@
+---
+log:
+  # if true, produce log in JSON format
+  in_json: true
+  # log level: panic, fatal, error, warn, info, debug, trace
+  level: debug
+nsxt:
+  # nsxt api url
+  url: https://api-nsxt.domain.org
+  # for password authentication
+  username: myaccount@ad.domain.org
+  password: myaccount-password
+  # for client certificate authentication
+  client_cert_path: ""
+  client_key_path: ""
+  # path to additionnal CA certificates
+  ca_cert_path: ""
+  # disable SSL server certificate checks
+  skip_ssl_verify: false
+  # number of retries for requests to nsxt api
+  max_retries: 3
+  # generate metrics only for given tier0 gateways. Get all Tier0 when empty
+  t0_filters:
+    - my-t1
+  # generate metrics only for given tier1 gateways. Get all Tier1 when empty
+  t1_filters:
+    - my-t1
+  # generate metrics only for given load balancer services. Get all load balancer when empty
+  lb_filters:
+    - my-lb
+
+exporter:
+  # exporter metric namespace
+  namespace: nsxt
+  # interval given in golang duration format between two metrics data refresh
+  interval_duration: 5m
+  # interval given in golang duration when last refresh ended in error
+  error_interval_duration: 1m
+  # exporter webserver port
+  port: 2113
+  # exporter metric endpoint path
+  path: "/metrics"
