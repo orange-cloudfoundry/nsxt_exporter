@@ -45,7 +45,7 @@ func NewMemberMetrics(namespace string, labels []string) *MemberMetrics {
 				Namespace: namespace,
 				Name:      "pool_member_status",
 				Help:      "Gives status of pool, 1 is UP",
-			}, labels),
+			}, slice(labels, "status")),
 		failure: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -87,7 +87,7 @@ func NewPoolMetrics(namespace string) *PoolMetrics {
 				Namespace: namespace,
 				Name:      "pool_status",
 				Help:      "Gives status of pool, 1 is UP",
-			}, labels),
+			}, slice(labels, "status")),
 		info: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,

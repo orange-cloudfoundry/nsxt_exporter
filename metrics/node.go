@@ -133,6 +133,7 @@ func (m *InterfaceMetrics) Reset() {
 }
 
 func NewNodeMetrics(namespace string) *NodeMetrics {
+	labels := []string{"uuid", "ip", "name"}
 	return &NodeMetrics{
 		interfaces: NewInterfaceMetrics(namespace),
 		status: *promauto.NewGaugeVec(
@@ -140,13 +141,13 @@ func NewNodeMetrics(namespace string) *NodeMetrics {
 				Namespace: namespace,
 				Name:      "cluster_node_status",
 				Help:      "Cluster node status, 1 means CONNECTED",
-			}, []string{"uuid", "ip", "name"}),
+			}, slice(labels, "status")),
 		cpu: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_cpu",
 				Help:      "Number of CPU core",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		fsTotal: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -164,55 +165,55 @@ func NewNodeMetrics(namespace string) *NodeMetrics {
 				Namespace: namespace,
 				Name:      "cluster_node_load1",
 				Help:      "Current load average (load 1 minute)",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		load5: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_load5",
 				Help:      "Current load average (load 5 minutes)",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		load15: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_load15",
 				Help:      "Current load average (load 15 minutes)",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		memTotal: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_mem_total",
 				Help:      "Total available memory in kB",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		memUsed: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_mem_used",
 				Help:      "Used memory in kB",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		memCache: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_mem_cache",
 				Help:      "Cached memory in kB",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		uptime: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_uptime",
 				Help:      "Uptime expressed in millisecond since start",
-			}, []string{"uuid", "ip", "name"}),
+			}, labels),
 		version: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_version",
 				Help:      "Node current version, value always 1",
-			}, []string{"uuid", "ip", "name", "version"}),
+			}, slice(labels, "version")),
 		certificates: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_node_certificates",
 				Help:      "Node SSL certificate validity end date expressed in number of second since EPOCH",
-			}, []string{"uuid", "ip", "name", "type", "index"}),
+			}, slice(labels, "type", "index")),
 	}
 }
 
@@ -240,7 +241,9 @@ func (m *NodeMetrics) Populate(info *api.NodeInfo) error {
 		info.Config.DisplayName,
 	}
 
-	m.status.WithLabelValues(labels...).Set(statusToValue(info.Status.MgmtClusterStatus.MgmtClusterStatus, StatusConnected))
+	statusLabels := slice(labels, info.Status.MgmtClusterStatus.MgmtClusterStatus)
+	m.status.WithLabelValues(statusLabels...).Set(statusToValue(info.Status.MgmtClusterStatus.MgmtClusterStatus, StatusConnected))
+
 	m.cpu.WithLabelValues(labels...).Set(float64(info.Status.SystemStatus.CpuCores))
 	for _, cFS := range info.Status.SystemStatus.FileSystems {
 		fsLabels := slice(labels, cFS.Type_, cFS.FileSystem)

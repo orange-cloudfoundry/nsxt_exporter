@@ -6,14 +6,15 @@ import (
 	"github.com/orange-cloudfoundry/nsxt_exporter/api"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	log "github.com/sirupsen/logrus"
 )
 
 type Recorder struct {
 	manager               *api.NSXApi
 	scrapeError           prometheus.Gauge
 	scrapeDurationSeconds prometheus.Gauge
-	clusterControlStatus  prometheus.Gauge
-	clusterMgmtStatus     prometheus.Gauge
+	clusterControlStatus  prometheus.GaugeVec
+	clusterMgmtStatus     prometheus.GaugeVec
 	node                  *NodeMetrics
 	lb                    *LBMetrics
 	vs                    *VSMetrics
@@ -43,18 +44,18 @@ func NewRecorder(manager *api.NSXApi, namespace string) *Recorder {
 				Name:      "scrape_duration_seconds",
 				Help:      "Duration of Vsphere scraping in milliseconds",
 			}),
-		clusterControlStatus: promauto.NewGauge(
+		clusterControlStatus: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_control_status",
 				Help:      "Cluster control status, 1 means STABLE",
-			}),
-		clusterMgmtStatus: promauto.NewGauge(
+			}, []string{"status"}),
+		clusterMgmtStatus: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "cluster_mgmt_status",
 				Help:      "Cluster management status, 1 means STABLE",
-			}),
+			}, []string{"status"}),
 	}
 }
 
@@ -67,6 +68,7 @@ func (r *Recorder) Reset() {
 }
 
 func (r *Recorder) RecordMetrics() error {
+	log.Infof("fetching data from nsxt")
 	r.Reset()
 
 	start := time.Now()
@@ -77,8 +79,8 @@ func (r *Recorder) RecordMetrics() error {
 		r.scrapeError.Set(1)
 		return err
 	}
-	r.clusterControlStatus.Set(statusToValue(cluster.ControlClusterStatus.Status, StatusStable))
-	r.clusterMgmtStatus.Set(statusToValue(cluster.MgmtClusterStatus.Status, StatusStable))
+	r.clusterControlStatus.WithLabelValues(cluster.ControlClusterStatus.Status).Set(statusToValue(cluster.ControlClusterStatus.Status, StatusStable))
+	r.clusterMgmtStatus.WithLabelValues(cluster.MgmtClusterStatus.Status).Set(statusToValue(cluster.MgmtClusterStatus.Status, StatusStable))
 
 	// cluster nodes
 	nodes := []string{}
@@ -153,6 +155,7 @@ func (r *Recorder) RecordMetrics() error {
 		r.tier0.Populate(cT0, state.Tier0State, state.Tier0Status)
 	}
 
+	log.Infof("fetching data from nsxt finished after %.0fs", time.Since(start).Seconds())
 	r.scrapeDurationSeconds.Set(time.Since(start).Seconds())
 	return nil
 }

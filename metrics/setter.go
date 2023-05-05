@@ -48,10 +48,14 @@ func setb(metric prometheus.GaugeVec, labels []string, value *bool) {
 // nolint: unparam
 func setv(metric prometheus.GaugeVec, labels []string, value *string, expect string) {
 	v := 0
-	if value != nil && *value == expect {
-		v = 1
+	label := "unknown"
+	if value != nil {
+		label = *value
+		if *value == expect {
+			v = 1
+		}
 	}
-	set(metric, labels, v)
+	set(metric, slice(labels, label), v)
 }
 
 // set if labels - set value 1 with given labels if all labels and non-nil

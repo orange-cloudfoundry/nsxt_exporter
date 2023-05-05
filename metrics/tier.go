@@ -58,8 +58,8 @@ func NewTierMetrics(namespace string, kind string) TierMetrics {
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      fmt.Sprintf("%s_status", kind),
-				Help:      fmt.Sprintf("Give status of %s, 1 is is_sync", kind),
-			}, labels),
+				Help:      fmt.Sprintf("Give status of %s, 1 is in_sync", kind),
+			}, slice(labels, "status")),
 		failure: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,

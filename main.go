@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
+	"github.com/vmware/vsphere-automation-sdk-go/runtime/log"
 )
 
 var (
@@ -39,6 +40,7 @@ func main() {
 		lvl = logrus.InfoLevel
 	}
 	logrus.SetLevel(lvl)
+	log.SetLogger(logrus.StandardLogger())
 
 	recorder := metrics.NewRecorder(manager, namespace)
 
@@ -47,11 +49,13 @@ func main() {
 			for {
 				err := recorder.RecordMetrics()
 				if err != nil {
-					logrus.Error("Error when creating metrics: " + err.Error())
+					logrus.WithError(err).Error("could not fetch metrics data")
 					break
 				}
+				logrus.Debugf("sleeping %.0fs...", object.Exporter.IntervalDuration.Seconds())
 				time.Sleep(object.Exporter.IntervalDuration)
 			}
+			logrus.Debugf("sleeping %.0fs after error...", object.Exporter.ErrorIntervalDuration.Seconds())
 			time.Sleep(object.Exporter.ErrorIntervalDuration)
 		}
 	}()

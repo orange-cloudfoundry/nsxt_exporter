@@ -50,7 +50,7 @@ func NewLBMetrics(namespace string) *LBMetrics {
 				Namespace: namespace,
 				Name:      "load_balancer_status",
 				Help:      "Gives status of load balancer, 1 is UP",
-			}, labels),
+			}, slice(labels, "status")),
 		info: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -84,8 +84,8 @@ func NewLBMetrics(namespace string) *LBMetrics {
 		vsCount: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
-				Name:      "load_balancer_virtual_servers",
-				Help:      "Give number of virtual servers associated to load balancer",
+				Name:      "load_balancer_virtual_server",
+				Help:      "Give number of virtual server associated to load balancer",
 			}, labels),
 		sessionL4: NewSessionMetrics(namespace, "load_balancer", "l4", labels),
 		sessionL7: NewSessionMetrics(namespace, "load_balancer", "l7", labels),

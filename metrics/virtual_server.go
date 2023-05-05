@@ -53,7 +53,7 @@ func NewVSMetrics(namespace string) *VSMetrics {
 				Namespace: namespace,
 				Name:      "virtual_server_status",
 				Help:      "Gives status of virtual server, 1 is UP",
-			}, labels),
+			}, slice(labels, "status")),
 		info: *promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,

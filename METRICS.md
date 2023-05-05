@@ -31,9 +31,9 @@ nsxt_scrape_error 0
 
 ```
 # HELP nsxt_cluster_control_status Cluster control status, 1 means STABLE
-nsxt_cluster_control_status 1
+nsxt_cluster_control_status{status="STABLE"} 1
 # HELP nsxt_cluster_mgmt_status Cluster management status, 1 means STABLE
-nsxt_cluster_mgmt_status 1
+nsxt_cluster_mgmt_status{status="STABLE"} 1
 # HELP nsxt_cluster_node_certificates Node SSL certificate validity end date expressed in number of second since EPOCH
 nsxt_cluster_node_certificates{index="0",ip="10.1.0.41",name="myhostname",type="api",uuid="guid..."} 1.717422318e+09
 # HELP nsxt_cluster_node_cpu Number of CPU core
@@ -73,7 +73,7 @@ nsxt_cluster_node_load15{ip="10.1.0.41",name="myhostname",uuid="guid..."} 1.3200
 # HELP nsxt_cluster_node_load5 Current load average (load 5 minutes)
 nsxt_cluster_node_load5{ip="10.1.0.41",name="myhostname",uuid="guid..."} 1.25
 # HELP nsxt_cluster_node_status Cluster node status, 1 means CONNECTED
-nsxt_cluster_node_status{ip="10.1.0.41",name="myhostname",uuid="guid..."} 1
+nsxt_cluster_node_status{ip="10.1.0.41",name="myhostname",uuid="guid...", status="CONNECTED"} 1
 # HELP nsxt_cluster_node_uptime Uptime expressed in millisecond since start
 nsxt_cluster_node_uptime{ip="10.1.0.41",name="myhostname",uuid="guid..."} 6.66034e+08
 # HELP nsxt_cluster_node_version Node current version, value always 1
@@ -85,18 +85,18 @@ nsxt_cluster_node_version{ip="10.1.0.41",name="myhostname",uuid="guid...",versio
 ```
 # HELP nsxt_tier0_info Give informations as label about tier0, value is always 1
 nsxt_tier0_info{id="guid...",mode="ACTIVE_ACTIVE",name="my-t0"} 1
-nsxt_tier0_status{id="guid...",name="my-t0"} 1
+# HELP nsxt_tier0_status Give status of tier0, 1 is in_sync
+nsxt_tier0_status{id="guid...",name="my-t0", status="in_sync"} 1
 # HELP nsxt_tier0_transport Number of transport node associated to tier0
+nsxt_tier0_transport{id="guid...",name="my-t0"} 2
 # HELP nsxt_tier0_edge Current mode as label of edge node associated to tier0, value is always 1
 nsxt_tier0_edge{id="guid...",index="0",mode="ACTIVE",name="my-t0"} 1
-# HELP nsxt_tier0_status Give status of tier0, 1 is is_sync
-nsxt_tier0_transport{id="guid...",name="my-t0"} 2
 # HELP nsxt_tier0_failure Give failure details for tier0 if any, value is always 1
 nsxt_tier0_failure{id="guid...",name="my-t0", code="...", message="...} 1
 # HELP nsxt_tier1_info Give informations as label about tier1, value is always 1
 nsxt_tier1_info{id="guid...",mode="ACTIVE_STANDBY",name="my-t1"} 1
-# HELP nsxt_tier1_status Give status of tier1, 1 is is_sync
-nsxt_tier1_status{id="guid...",name="my-t1"} 1
+# HELP nsxt_tier1_status Give status of tier1, 1 is in_sync
+nsxt_tier1_status{id="guid...",name="my-t1", status="in_sync"} 1
 # HELP nsxt_tier1_edge Current mode as label of edge node associated to tier1, value is always 1
 nsxt_tier1_edge{id="guid...",index="0",mode="ACTIVE",name="my-t1"} 1
 # HELP nsxt_tier1_transport Number of transport node associated to tier1
@@ -113,7 +113,7 @@ nsxt_tier1_failure{id="guid...",name="my-t1", code="...", message="...} 1
 # HELP nsxt_load_balancer_info Give informations as label about load balancer, value is always 1
 nsxt_load_balancer_info{id="guid...",name="lb-dev",size="SMALL"} 1
 # HELP nsxt_load_balancer_status Gives status of load balancer, 1 is UP
-nsxt_load_balancer_status{id="guid...",name="lb-dev"} 1
+nsxt_load_balancer_status{id="guid...",name="lb-dev", status="UP"} 1
 # HELP load_balancer_alarm Give currently firing alarms if any on load balancer, value is always 1
 load_balancer_alarm{id="guid...",name="lb-dev", error_id="...", message="..."} 1
 # HELP nsxt_load_balancer_error Current error message for load balancer if any, value is always 1
@@ -140,8 +140,8 @@ nsxt_load_balancer_session_l7_max{id="guid...",name="lb-dev"} 21
 nsxt_load_balancer_session_l7_rate{id="guid...",name="lb-dev"} 0
 # HELP nsxt_load_balancer_session_l7_total Total number of l7 session for load_balancer
 nsxt_load_balancer_session_l7_total{id="guid...",name="lb-dev"} 254342
-# HELP nsxt_load_balancer_virtual_servers Give number of virtual servers associated to load balancer
-nsxt_load_balancer_virtual_servers{id="guid...",name="lb-dev"} 5
+# HELP nsxt_load_balancer_virtual_server Give number of virtual servers associated to load balancer
+nsxt_load_balancer_virtual_server{id="guid...",name="lb-dev"} 5
 ```
 
 ## Virtual server
@@ -150,7 +150,7 @@ nsxt_load_balancer_virtual_servers{id="guid...",name="lb-dev"} 5
 # HELP nsxt_virtual_server_info Give informations as label about virtual server, value is always 1
 nsxt_virtual_server_info{id="guid...",ip="10.86.30.131",lb_id="guid...",name="my-server-1",pool_id="guid..."} 1
 # HELP nsxt_virtual_server_status Gives status of virtual server, 1 is UP
-nsxt_virtual_server_status{id="guid...",name="my-server-1"} 1
+nsxt_virtual_server_status{id="guid...",name="my-server-1", status="UP"} 1
 # HELP nsxt_virtual_server_alarm Give currently firing alarms if any on virtual server, value is always 1
 nsxt_virtual_server_alarm{id="guid...",name="my-server-1", error_id="...", message="..."} 1
 # HELP nsxt_virtual_server_enable Tells if virtual server is enabled, 1 is enabled
@@ -187,7 +187,7 @@ nsxt_virtual_server_session_total{id="guid...",name="my-server-1"} 16846
 # HELP nsxt_pool_info Give informations as label about pool, value is always 1
 nsxt_pool_info{algorithm="ROUND_ROBIN",id="guid...",name="my-pool-1",port="443"} 1
 # HELP nsxt_pool_status Gives status of pool, 1 is UP
-nsxt_pool_status{id="guid...",name="my-pool-1"} 1
+nsxt_pool_status{id="guid...",name="my-pool-1", status="UP"} 1
 # HELP nsxt_pool_alarm Give currently firing alarms if any on pool, value is always 1
 nsxt_pool_alarm{id="guid...",name="my-server-1", error_id="...", message="..."} 1
 # HELP nsxt_pool_http_request Current number of http_request in pool
@@ -219,7 +219,7 @@ nsxt_pool_session_total{id="guid...",name="my-pool-1"} 6
 # HELP nsxt_pool_member_failure Gives failure cause as label if any, value is always 1
 nsxt_pool_member_failure{id="guid...",ip="172.19.4.38",name="my-pool-1",port="443", cause="..."} 1
 # HELP nsxt_pool_member_status Gives status of pool, 1 is UP
-nsxt_pool_member_status{id="guid...",ip="172.19.4.38",name="my-pool-1",port="443"} 1
+nsxt_pool_member_status{id="guid...",ip="172.19.4.38",name="my-pool-1",port="443", status="UP"} 1
 # HELP nsxt_pool_member_http_request Current number of http_request in pool member
 nsxt_pool_member_http_request{id="guid...",ip="172.19.4.38",name="my-pool-1",port="443"} 8423
 # HELP nsxt_pool_member_http_request_rate Number of http_request per second in pool member
