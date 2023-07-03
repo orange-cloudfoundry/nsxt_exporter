@@ -1,3 +1,29 @@
+Release v1.2.0
+==============
+
+**New Features**
+
+* Add the ability to write XML fragments using Token WriteTo functions.
+* Add the ability to re-indent an XML element as though it were the root of
+  the document.
+* Add a ReadSettings option to preserve CDATA blocks when reading and XML
+  document.
+
+Release v1.1.4
+==============
+
+**New Features**
+
+* Add the ability to preserve whitespace in leaf elements during indent.
+* Add the ability to suppress a document-trailing newline during indent.
+* Add choice of XML attribute quoting style (single-quote or double-quote).
+
+**Removed Features**
+
+* Removed the CDATA preservation change introduced in v1.1.3. It was
+  implemented in a way that broke the ability to process XML documents
+  encoded using non-UTF8 character sets.
+
 Release v1.1.3
 ==============
 

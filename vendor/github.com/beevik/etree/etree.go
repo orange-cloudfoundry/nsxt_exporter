@@ -18,13 +18,17 @@ import (
 )
 
 const (
-	// NoIndent is used with the Document Indent function to disable all
+	// NoIndent is used with the IndentSettings record to remove all
 	// indenting.
 	NoIndent = -1
 )
 
 // ErrXML is returned when XML parsing fails due to incorrect formatting.
 var ErrXML = errors.New("etree: invalid XML format")
+
+// cdataPrefix is used to detect CDATA text when ReadSettings.PreserveCData is
+// true.
+var cdataPrefix = []byte("<![CDATA[")
 
 // ReadSettings determine the default behavior of the Document's ReadFrom*
 // methods.
@@ -36,6 +40,12 @@ type ReadSettings struct {
 	// or attribute values. Default: false.
 	Permissive bool
 
+	// Preserve CDATA character data blocks when decoding XML (instead of
+	// converting it to normal character text). This entails additional
+	// processing and memory usage during ReadFrom* operations. Default:
+	// false.
+	PreserveCData bool
+
 	// Entity to be passed to standard xml.Decoder. Default: nil.
 	Entity map[string]string
 }
@@ -46,7 +56,9 @@ func newReadSettings() ReadSettings {
 		CharsetReader: func(label string, input io.Reader) (io.Reader, error) {
 			return input, nil
 		},
-		Permissive: false,
+		Permissive:    false,
+		PreserveCData: false,
+		Entity:        nil,
 	}
 }
 
@@ -66,8 +78,7 @@ func (s *ReadSettings) dup() ReadSettings {
 	}
 }
 
-// WriteSettings determine the behavior of the Document's WriteTo* and
-// Indent* methods.
+// WriteSettings determine the behavior of the Document's WriteTo* methods.
 type WriteSettings struct {
 	// CanonicalEndTags forces the production of XML end tags, even for
 	// elements that have no child elements. Default: false.
@@ -83,9 +94,16 @@ type WriteSettings struct {
 	// references are also produced for > and '. Default: false.
 	CanonicalAttrVal bool
 
-	// UseCRLF causes the document's indentation methods to use a carriage
-	// return followed by a linefeed ("\r\n") when outputting a newline. If
-	// false, only a linefeed is used ("\n"). Default: false.
+	// AttrSingleQuote causes attributes to use single quotes (attr='example')
+	// instead of double quotes (attr = "example") when set to true. Default:
+	// false.
+	AttrSingleQuote bool
+
+	// UseCRLF causes the document's Indent* methods to use a carriage return
+	// followed by a linefeed ("\r\n") when outputting a newline. If false,
+	// only a linefeed is used ("\n"). Default: false.
+	//
+	// Deprecated: UseCRLF is deprecated. Use IndentSettings.UseCRLF instead.
 	UseCRLF bool
 }
 
@@ -95,6 +113,7 @@ func newWriteSettings() WriteSettings {
 		CanonicalEndTags: false,
 		CanonicalText:    false,
 		CanonicalAttrVal: false,
+		AttrSingleQuote:  false,
 		UseCRLF:          false,
 	}
 }
@@ -104,16 +123,82 @@ func (s *WriteSettings) dup() WriteSettings {
 	return *s
 }
 
+// IndentSettings determine the behavior of the Document's Indent* methods.
+type IndentSettings struct {
+	// Spaces indicates the number of spaces to insert for each level of
+	// indentation. Set to etree.NoIndent to remove all indentation. Ignored
+	// when UseTabs is true. Default: 4.
+	Spaces int
+
+	// UseTabs causes tabs to be used instead of spaces when indenting.
+	// Default: false.
+	UseTabs bool
+
+	// UseCRLF causes newlines to be written as a carriage return followed by
+	// a linefeed ("\r\n"). If false, only a linefeed character is output
+	// for a newline ("\n"). Default: false.
+	UseCRLF bool
+
+	// PreserveLeafWhitespace causes indent methods to preserve whitespace
+	// within XML elements containing only non-CDATA character data. Default:
+	// false.
+	PreserveLeafWhitespace bool
+
+	// SuppressTrailingWhitespace suppresses the generation of a trailing
+	// whitespace characters (such as newlines) at the end of the indented
+	// document. Default: false.
+	SuppressTrailingWhitespace bool
+}
+
+// NewIndentSettings creates a default IndentSettings record.
+func NewIndentSettings() *IndentSettings {
+	return &IndentSettings{
+		Spaces:                     4,
+		UseTabs:                    false,
+		UseCRLF:                    false,
+		PreserveLeafWhitespace:     false,
+		SuppressTrailingWhitespace: false,
+	}
+}
+
+type indentFunc func(depth int) string
+
+func getIndentFunc(s *IndentSettings) indentFunc {
+	if s.UseTabs {
+		if s.UseCRLF {
+			return func(depth int) string { return indentCRLF(depth, indentTabs) }
+		} else {
+			return func(depth int) string { return indentLF(depth, indentTabs) }
+		}
+	} else {
+		if s.Spaces < 0 {
+			return func(depth int) string { return "" }
+		} else if s.UseCRLF {
+			return func(depth int) string { return indentCRLF(depth*s.Spaces, indentSpaces) }
+		} else {
+			return func(depth int) string { return indentLF(depth*s.Spaces, indentSpaces) }
+		}
+	}
+}
+
+// Writer is the interface that wraps the Write* methods called by each token
+// type's WriteTo function.
+type Writer interface {
+	io.StringWriter
+	io.ByteWriter
+	io.Writer
+}
+
 // A Token is an interface type used to represent XML elements, character
 // data, CDATA sections, XML comments, XML directives, and XML processing
 // instructions.
 type Token interface {
 	Parent() *Element
 	Index() int
+	WriteTo(w Writer, s *WriteSettings)
 	dup(parent *Element) Token
 	setParent(parent *Element)
 	setIndex(index int)
-	writeTo(w *bufio.Writer, s *WriteSettings)
 }
 
 // A Document is a container holding a complete XML tree.
@@ -291,7 +376,7 @@ func (d *Document) WriteTo(w io.Writer) (n int64, err error) {
 	xw := newXmlWriter(w)
 	b := bufio.NewWriter(xw)
 	for _, c := range d.Child {
-		c.writeTo(b, &d.WriteSettings)
+		c.WriteTo(b, &d.WriteSettings)
 	}
 	err, n = b.Flush(), xw.bytes
 	return
@@ -326,37 +411,50 @@ func (d *Document) WriteToString() (s string, err error) {
 	return string(b), nil
 }
 
-type indentFunc func(depth int) string
-
 // Indent modifies the document's element tree by inserting character data
-// tokens containing newlines and indentation. The amount of indentation per
-// depth level is given by the 'spaces' parameter. Pass etree.NoIndent for
-// 'spaces' if you want no indentation at all.
+// tokens containing newlines and spaces for indentation. The amount of
+// indentation per depth level is given by the 'spaces' parameter. Other than
+// the number of spaces, default IndentSettings are used.
 func (d *Document) Indent(spaces int) {
-	var indent indentFunc
-	switch {
-	case spaces < 0:
-		indent = func(depth int) string { return "" }
-	case d.WriteSettings.UseCRLF:
-		indent = func(depth int) string { return indentCRLF(depth*spaces, indentSpaces) }
-	default:
-		indent = func(depth int) string { return indentLF(depth*spaces, indentSpaces) }
-	}
-	d.Element.indent(0, indent)
+	s := NewIndentSettings()
+	s.Spaces = spaces
+	d.IndentWithSettings(s)
 }
 
 // IndentTabs modifies the document's element tree by inserting CharData
-// tokens containing newlines and tabs for indentation.  One tab is used per
-// indentation level.
+// tokens containing newlines and tabs for indentation. One tab is used per
+// indentation level. Other than the use of tabs, default IndentSettings
+// are used.
 func (d *Document) IndentTabs() {
-	var indent indentFunc
-	switch d.WriteSettings.UseCRLF {
-	case true:
-		indent = func(depth int) string { return indentCRLF(depth, indentTabs) }
-	default:
-		indent = func(depth int) string { return indentLF(depth, indentTabs) }
+	s := NewIndentSettings()
+	s.UseTabs = true
+	d.IndentWithSettings(s)
+}
+
+// IndentWithSettings modifies the document's element tree by inserting
+// character data tokens containing newlines and indentation. The behavior
+// of the indentation algorithm is configured by the indent settings.
+func (d *Document) IndentWithSettings(s *IndentSettings) {
+	// WriteSettings.UseCRLF is deprecated. Until removed from the package, it
+	// overrides IndentSettings.UseCRLF when true.
+	if d.WriteSettings.UseCRLF {
+		s.UseCRLF = true
 	}
-	d.Element.indent(0, indent)
+
+	d.Element.indent(0, getIndentFunc(s), s)
+
+	if s.SuppressTrailingWhitespace {
+		d.Element.stripTrailingWhitespace()
+	}
+}
+
+// Unindent modifies the document's element tree by removing character data
+// tokens containing only whitespace. Other than the removal of indentation,
+// default IndentSettings are used.
+func (d *Document) Unindent() {
+	s := NewIndentSettings()
+	s.Spaces = NoIndent
+	d.IndentWithSettings(s)
 }
 
 // NewElement creates an unparented element with the specified tag (i.e.,
@@ -688,26 +786,39 @@ func (e *Element) RemoveChildAt(index int) Token {
 // ReadFrom reads XML from the reader 'ri' and stores the result as a new
 // child of this element.
 func (e *Element) readFrom(ri io.Reader, settings ReadSettings) (n int64, err error) {
-	xr := newXmlReader(ri)
-	dec := xml.NewDecoder(xr)
+	var r xmlReader
+	var pr *xmlPeekReader
+	if settings.PreserveCData {
+		pr = newXmlPeekReader(ri)
+		r = pr
+	} else {
+		r = newXmlSimpleReader(ri)
+	}
+
+	dec := xml.NewDecoder(r)
 	dec.CharsetReader = settings.CharsetReader
 	dec.Strict = !settings.Permissive
 	dec.Entity = settings.Entity
+
 	var stack stack
 	stack.push(e)
 	for {
-		xr.ResetPeek(dec.InputOffset())
+		if pr != nil {
+			pr.PeekPrepare(dec.InputOffset(), len(cdataPrefix))
+		}
+
 		t, err := dec.RawToken()
+
 		switch {
 		case err == io.EOF:
 			if len(stack.data) != 1 {
-				return xr.bytes, ErrXML
+				return r.Bytes(), ErrXML
 			}
-			return xr.bytes, nil
+			return r.Bytes(), nil
 		case err != nil:
-			return xr.bytes, err
+			return r.Bytes(), err
 		case stack.empty():
-			return xr.bytes, ErrXML
+			return r.Bytes(), ErrXML
 		}
 
 		top := stack.peek().(*Element)
@@ -721,17 +832,23 @@ func (e *Element) readFrom(ri io.Reader, settings ReadSettings) (n int64, err er
 			stack.push(e)
 		case xml.EndElement:
 			if top.Tag != t.Name.Local || top.Space != t.Name.Space {
-				return xr.bytes, ErrXML
+				return r.Bytes(), ErrXML
 			}
 			stack.pop()
 		case xml.CharData:
 			data := string(t)
 			var flags charDataFlags
-			if isWhitespace(data) {
-				flags |= whitespaceFlag
-			}
-			if xr.PeekContainsCdata() {
-				flags |= cdataFlag
+			if pr != nil {
+				peekBuf := pr.PeekFinalize()
+				if bytes.Equal(peekBuf, cdataPrefix) {
+					flags = cdataFlag
+				} else if isWhitespace(data) {
+					flags = whitespaceFlag
+				}
+			} else {
+				if isWhitespace(data) {
+					flags = whitespaceFlag
+				}
 			}
 			newCharData(data, flags, top)
 		case xml.Comment:
@@ -929,10 +1046,20 @@ func (e *Element) GetRelativePath(source *Element) string {
 	return strings.Join(parts, "/")
 }
 
+// IndentWithSettings modifies the element and its child tree by inserting
+// character data tokens containing newlines and indentation. The behavior of
+// the indentation algorithm is configured by the indent settings. Because
+// this function indents the element as if it were at the root of a document,
+// it is most useful when called just before writing the element as an XML
+// fragment using WriteTo.
+func (e *Element) IndentWithSettings(s *IndentSettings) {
+	e.indent(1, getIndentFunc(s), s)
+}
+
 // indent recursively inserts proper indentation between an XML element's
 // child tokens.
-func (e *Element) indent(depth int, indent indentFunc) {
-	e.stripIndent()
+func (e *Element) indent(depth int, indent indentFunc, s *IndentSettings) {
+	e.stripIndent(s)
 	n := len(e.Child)
 	if n == 0 {
 		return
@@ -960,7 +1087,7 @@ func (e *Element) indent(depth int, indent indentFunc) {
 
 		// Recursively process child elements.
 		if ce, ok := c.(*Element); ok {
-			ce.indent(depth+1, indent)
+			ce.indent(depth+1, indent, s)
 		}
 	}
 
@@ -976,7 +1103,7 @@ func (e *Element) indent(depth int, indent indentFunc) {
 }
 
 // stripIndent removes any previously inserted indentation.
-func (e *Element) stripIndent() {
+func (e *Element) stripIndent(s *IndentSettings) {
 	// Count the number of non-indent child tokens
 	n := len(e.Child)
 	for _, c := range e.Child {
@@ -985,6 +1112,9 @@ func (e *Element) stripIndent() {
 		}
 	}
 	if n == len(e.Child) {
+		return
+	}
+	if n == 0 && len(e.Child) == 1 && s.PreserveLeafWhitespace {
 		return
 	}
 
@@ -1000,6 +1130,17 @@ func (e *Element) stripIndent() {
 		j++
 	}
 	e.Child = newChild
+}
+
+// stripTrailingWhitespace removes any trailing whitespace CharData tokens
+// from the element's children.
+func (e *Element) stripTrailingWhitespace() {
+	for i := len(e.Child) - 1; i >= 0; i-- {
+		if cd, ok := e.Child[i].(*CharData); !ok || !cd.IsWhitespace() {
+			e.Child = e.Child[:i+1]
+			return
+		}
+	}
 }
 
 // dup duplicates the element.
@@ -1032,28 +1173,18 @@ func (e *Element) Index() int {
 	return e.index
 }
 
-// setParent replaces this element token's parent.
-func (e *Element) setParent(parent *Element) {
-	e.parent = parent
-}
-
-// setIndex sets this element token's index within its parent's Child slice.
-func (e *Element) setIndex(index int) {
-	e.index = index
-}
-
-// writeTo serializes the element to the writer w.
-func (e *Element) writeTo(w *bufio.Writer, s *WriteSettings) {
+// WriteTo serializes the element to the writer w.
+func (e *Element) WriteTo(w Writer, s *WriteSettings) {
 	w.WriteByte('<')
 	w.WriteString(e.FullTag())
 	for _, a := range e.Attr {
 		w.WriteByte(' ')
-		a.writeTo(w, s)
+		a.WriteTo(w, s)
 	}
 	if len(e.Child) > 0 {
 		w.WriteByte('>')
 		for _, c := range e.Child {
-			c.writeTo(w, s)
+			c.WriteTo(w, s)
 		}
 		w.Write([]byte{'<', '/'})
 		w.WriteString(e.FullTag())
@@ -1067,6 +1198,16 @@ func (e *Element) writeTo(w *bufio.Writer, s *WriteSettings) {
 			w.Write([]byte{'/', '>'})
 		}
 	}
+}
+
+// setParent replaces this element token's parent.
+func (e *Element) setParent(parent *Element) {
+	e.parent = parent
+}
+
+// setIndex sets this element token's index within its parent's Child slice.
+func (e *Element) setIndex(index int) {
+	e.index = index
 }
 
 // addChild adds a child token to the element e.
@@ -1170,10 +1311,14 @@ func (a *Attr) NamespaceURI() string {
 	return a.element.findLocalNamespaceURI(a.Space)
 }
 
-// writeTo serializes the attribute to the writer.
-func (a *Attr) writeTo(w *bufio.Writer, s *WriteSettings) {
+// WriteTo serializes the attribute to the writer.
+func (a *Attr) WriteTo(w Writer, s *WriteSettings) {
 	w.WriteString(a.FullKey())
-	w.WriteString(`="`)
+	if s.AttrSingleQuote {
+		w.WriteString(`='`)
+	} else {
+		w.WriteString(`="`)
+	}
 	var m escapeMode
 	if s.CanonicalAttrVal {
 		m = escapeCanonicalAttr
@@ -1181,7 +1326,11 @@ func (a *Attr) writeTo(w *bufio.Writer, s *WriteSettings) {
 		m = escapeNormal
 	}
 	escapeString(w, a.Value, m)
-	w.WriteByte('"')
+	if s.AttrSingleQuote {
+		w.WriteByte('\'')
+	} else {
+		w.WriteByte('"')
+	}
 }
 
 // NewText creates an unparented CharData token containing simple text data.
@@ -1219,8 +1368,8 @@ func newCharData(data string, flags charDataFlags, parent *Element) *CharData {
 	return c
 }
 
-// CreateText creates a CharData token simple text data and adds it to the
-// end of this element's list of child tokens.
+// CreateText creates a CharData token containing simple text data and adds it
+// to the end of this element's list of child tokens.
 func (e *Element) CreateText(text string) *CharData {
 	return newCharData(text, 0, e)
 }
@@ -1232,13 +1381,13 @@ func (e *Element) CreateCData(data string) *CharData {
 	return newCharData(data, cdataFlag, e)
 }
 
-// CreateCharData creates a CharData token simple text data and adds it to the
-// end of this element's list of child tokens.
+// CreateCharData creates a CharData token containing simple text data and
+// adds it to the end of this element's list of child tokens.
 //
 // Deprecated: CreateCharData is deprecated. Instead, use CreateText, which
 // does the same thing.
 func (e *Element) CreateCharData(data string) *CharData {
-	return newCharData(data, 0, e)
+	return e.CreateText(data)
 }
 
 // SetData modifies the content of the CharData token. In the case of a
@@ -1278,6 +1427,23 @@ func (c *CharData) Index() int {
 	return c.index
 }
 
+// WriteTo serializes character data to the writer.
+func (c *CharData) WriteTo(w Writer, s *WriteSettings) {
+	if c.IsCData() {
+		w.WriteString(`<![CDATA[`)
+		w.WriteString(c.Data)
+		w.WriteString(`]]>`)
+	} else {
+		var m escapeMode
+		if s.CanonicalText {
+			m = escapeCanonicalText
+		} else {
+			m = escapeNormal
+		}
+		escapeString(w, c.Data, m)
+	}
+}
+
 // dup duplicates the character data.
 func (c *CharData) dup(parent *Element) Token {
 	return &CharData{
@@ -1297,23 +1463,6 @@ func (c *CharData) setParent(parent *Element) {
 // slice.
 func (c *CharData) setIndex(index int) {
 	c.index = index
-}
-
-// writeTo serializes character data to the writer.
-func (c *CharData) writeTo(w *bufio.Writer, s *WriteSettings) {
-	if c.IsCData() {
-		w.WriteString(`<![CDATA[`)
-		w.WriteString(c.Data)
-		w.WriteString(`]]>`)
-	} else {
-		var m escapeMode
-		if s.CanonicalText {
-			m = escapeCanonicalText
-		} else {
-			m = escapeNormal
-		}
-		escapeString(w, c.Data, m)
-	}
 }
 
 // NewComment creates an unparented comment token.
@@ -1361,6 +1510,13 @@ func (c *Comment) Index() int {
 	return c.index
 }
 
+// WriteTo serialies the comment to the writer.
+func (c *Comment) WriteTo(w Writer, s *WriteSettings) {
+	w.WriteString("<!--")
+	w.WriteString(c.Data)
+	w.WriteString("-->")
+}
+
 // setParent replaces the comment token's parent.
 func (c *Comment) setParent(parent *Element) {
 	c.parent = parent
@@ -1370,13 +1526,6 @@ func (c *Comment) setParent(parent *Element) {
 // slice.
 func (c *Comment) setIndex(index int) {
 	c.index = index
-}
-
-// writeTo serialies the comment to the writer.
-func (c *Comment) writeTo(w *bufio.Writer, s *WriteSettings) {
-	w.WriteString("<!--")
-	w.WriteString(c.Data)
-	w.WriteString("-->")
 }
 
 // NewDirective creates an unparented XML directive token.
@@ -1426,6 +1575,13 @@ func (d *Directive) Index() int {
 	return d.index
 }
 
+// WriteTo serializes the XML directive to the writer.
+func (d *Directive) WriteTo(w Writer, s *WriteSettings) {
+	w.WriteString("<!")
+	w.WriteString(d.Data)
+	w.WriteString(">")
+}
+
 // setParent replaces the directive token's parent.
 func (d *Directive) setParent(parent *Element) {
 	d.parent = parent
@@ -1435,13 +1591,6 @@ func (d *Directive) setParent(parent *Element) {
 // slice.
 func (d *Directive) setIndex(index int) {
 	d.index = index
-}
-
-// writeTo serializes the XML directive to the writer.
-func (d *Directive) writeTo(w *bufio.Writer, s *WriteSettings) {
-	w.WriteString("<!")
-	w.WriteString(d.Data)
-	w.WriteString(">")
 }
 
 // NewProcInst creates an unparented XML processing instruction.
@@ -1494,6 +1643,17 @@ func (p *ProcInst) Index() int {
 	return p.index
 }
 
+// WriteTo serializes the processing instruction to the writer.
+func (p *ProcInst) WriteTo(w Writer, s *WriteSettings) {
+	w.WriteString("<?")
+	w.WriteString(p.Target)
+	if p.Inst != "" {
+		w.WriteByte(' ')
+		w.WriteString(p.Inst)
+	}
+	w.WriteString("?>")
+}
+
 // setParent replaces the processing instruction token's parent.
 func (p *ProcInst) setParent(parent *Element) {
 	p.parent = parent
@@ -1503,15 +1663,4 @@ func (p *ProcInst) setParent(parent *Element) {
 // element's Child slice.
 func (p *ProcInst) setIndex(index int) {
 	p.index = index
-}
-
-// writeTo serializes the processing instruction to the writer.
-func (p *ProcInst) writeTo(w *bufio.Writer, s *WriteSettings) {
-	w.WriteString("<?")
-	w.WriteString(p.Target)
-	if p.Inst != "" {
-		w.WriteByte(' ')
-		w.WriteString(p.Inst)
-	}
-	w.WriteString("?>")
 }
