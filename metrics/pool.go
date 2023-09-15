@@ -150,7 +150,7 @@ func (p *PoolMetrics) Populate(info api.PoolInfo) {
 	set(p.memberCount, labels, len(info.Status.Members))
 	setp(p.memberMin, labels, info.Config.MinActiveMembers)
 
-	for _, cMember := range info.Members {
-		p.member.Populate(&cMember.Status, &cMember.Stats, labels)
+	for i := range info.Members {
+		p.member.Populate(&info.Members[i].Status, &info.Members[i].Stats, labels)
 	}
 }
