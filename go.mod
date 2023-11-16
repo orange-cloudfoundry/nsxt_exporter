@@ -3,7 +3,7 @@ module github.com/orange-cloudfoundry/nsxt_exporter
 go 1.21
 
 require (
-	github.com/alecthomas/kingpin/v2 v2.3.2
+	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/common v0.45.0
 	github.com/sirupsen/logrus v1.9.3
