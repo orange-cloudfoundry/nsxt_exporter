@@ -3,12 +3,6 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"math/rand"
-	"net/http"
-	"os"
-	"sync"
-	"time"
-
 	"github.com/orange-cloudfoundry/nsxt_exporter/config"
 	log "github.com/sirupsen/logrus"
 	nsxt "github.com/vmware/go-vmware-nsxt"
@@ -16,14 +10,15 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/protocol/client"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/protocol/client/middleware/retry"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/security"
+	"net/http"
+	"os"
+	"sync"
 )
 
 var (
 	retryCodes = []int{429, 503}
-	True       = true
 	False      = false
 	RealTime   = "realtime"
-	Cached     = "cached"
 )
 
 type NSXApi struct {
@@ -159,14 +154,6 @@ func (a *NSXApi) getNSXPolicyRetryFunc() retry.RetryFunc {
 		}
 		if !shouldRetry {
 			return false
-		}
-		min := 500
-		max := 5000
-		if max > 0 {
-			//nolint:gosec
-			interval := rand.Intn(max-min) + min
-			time.Sleep(time.Duration(interval) * time.Millisecond)
-			a.log.Debugf("waited %d ms before retrying", interval)
 		}
 		return true
 	}
