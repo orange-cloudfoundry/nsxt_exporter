@@ -3,12 +3,6 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"math/rand"
-	"net/http"
-	"os"
-	"sync"
-	"time"
-
 	"github.com/orange-cloudfoundry/nsxt_exporter/config"
 	log "github.com/sirupsen/logrus"
 	nsxt "github.com/vmware/go-vmware-nsxt"
@@ -16,14 +10,15 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/protocol/client"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/protocol/client/middleware/retry"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/security"
+	"net/http"
+	"os"
+	"sync"
 )
 
 var (
 	retryCodes = []int{429, 503}
-	True       = true
 	False      = false
 	RealTime   = "realtime"
-	Cached     = "cached"
 )
 
 type NSXApi struct {
@@ -160,14 +155,6 @@ func (a *NSXApi) getNSXPolicyRetryFunc() retry.RetryFunc {
 		if !shouldRetry {
 			return false
 		}
-		min := 500
-		max := 5000
-		if max > 0 {
-			//nolint:gosec
-			interval := (rand.Intn(max-min) + min)
-			time.Sleep(time.Duration(interval) * time.Millisecond)
-			a.log.Debugf("waited %d ms before retrying", interval)
-		}
 		return true
 	}
 }
@@ -181,52 +168,3 @@ func (a *NSXApi) getNSXPolicySecurityContext() core.SecurityContext {
 	}
 	return securityCtx
 }
-
-// func (a *NSXApi) listT1() ([]model.Tier1, error) {
-// 	var cursor *string = nil
-
-// 	a.log.Debugf("fetching T1 gateways list")
-// 	res := []model.Tier1{}
-// 	cli := infra.NewTier1sClient(a.connector)
-
-// 	for {
-// 		lbs, err := cli.List(cursor, &False, nil, nil, nil, nil)
-// 		if err != nil {
-// 			a.log.WithError(err).Errorf("could not list T1 gateways")
-// 			return nil, err
-// 		}
-
-// 		for _, cRes := range lbs.Results {
-// 			empty := (len(a.config.T1Filters) == 0)
-// 			hasName := slices.Contains(a.config.T1Filters, *cRes.DisplayName)
-// 			hasID := slices.Contains(a.config.T1Filters, *cRes.Id)
-// 			log.Debugf("found tier1 gateway '%s' (%s)", *cRes.DisplayName, *cRes.Id)
-// 			if empty || hasName || hasID {
-// 				res = append(res, cRes)
-// 			}
-// 		}
-
-// 		cursor = lbs.Cursor
-// 		if cursor == nil {
-// 			break
-// 		}
-// 	}
-// 	return res, nil
-// }
-
-// func (a *NSXApi) getT1Status(TierID string) (*model.Tier1GatewayState, error) {
-// 	a.log.Debugf("fetching T1 gateway '%s' status", TierID)
-// 	cli := tier_1s.NewStateClient(a.connector)
-// 	statuses, err := cli.Get(TierID, nil, nil, nil, nil, nil, nil, nil, nil)
-// 	if err != nil {
-// 		a.log.WithError(err).Errorf("could not fetch T1 gateway '%s' status", TierID)
-// 		return nil, err
-// 	}
-
-// 	b, _ := json.MarshalIndent(statuses.Tier1State, "", "  ")
-// 	fmt.Printf("%s\n", b)
-// 	b, _ = json.MarshalIndent(statuses.Tier1Status, "", "  ")
-// 	fmt.Printf("%s\n", b)
-
-// 	return &statuses, nil
-// }
