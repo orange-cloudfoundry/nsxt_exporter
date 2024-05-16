@@ -7,7 +7,7 @@ import (
 	vapiBindings_ "github.com/vmware/vsphere-automation-sdk-go/runtime/bindings"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/lb_services"
-	model "github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
+	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
 	"golang.org/x/exp/slices"
 )
 
@@ -52,7 +52,7 @@ func (a *NSXApi) ListLoadBalancers() ([]model.LBService, error) {
 		}
 
 		for _, cRes := range lbs.Results {
-			empty := (len(a.config.LBFilters) == 0)
+			empty := len(a.config.LBFilters) == 0
 			hasName := slices.Contains(a.config.LBFilters, *cRes.DisplayName)
 			hasID := slices.Contains(a.config.LBFilters, *cRes.Id)
 			log.Debugf("found LB service '%s' (%s)", *cRes.DisplayName, *cRes.Id)

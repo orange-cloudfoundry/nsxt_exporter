@@ -23,7 +23,7 @@ func (a *NSXApi) ListT0() ([]model.Tier0, error) {
 		}
 
 		for _, cRes := range lbs.Results {
-			empty := (len(a.config.T0Filters) == 0)
+			empty := len(a.config.T0Filters) == 0
 			hasName := slices.Contains(a.config.T0Filters, *cRes.DisplayName)
 			hasID := slices.Contains(a.config.T0Filters, *cRes.Id)
 			if empty || hasName || hasID {

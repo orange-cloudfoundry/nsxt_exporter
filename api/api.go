@@ -164,7 +164,7 @@ func (a *NSXApi) getNSXPolicyRetryFunc() retry.RetryFunc {
 		max := 5000
 		if max > 0 {
 			//nolint:gosec
-			interval := (rand.Intn(max-min) + min)
+			interval := rand.Intn(max-min) + min
 			time.Sleep(time.Duration(interval) * time.Millisecond)
 			a.log.Debugf("waited %d ms before retrying", interval)
 		}
