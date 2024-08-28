@@ -5,7 +5,7 @@ go 1.22.6
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/prometheus/client_golang v1.20.2
-	github.com/prometheus/common v0.55.0
+	github.com/prometheus/common v0.56.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vmware/go-vmware-nsxt v0.0.0-20230223012718-d31b8a1ca05e
 	github.com/vmware/vsphere-automation-sdk-go/runtime v0.7.0
