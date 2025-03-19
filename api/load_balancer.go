@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 
+	"github.com/orange-cloudfoundry/nsxt_exporter/config"
 	log "github.com/sirupsen/logrus"
 	vapiBindings_ "github.com/vmware/vsphere-automation-sdk-go/runtime/bindings"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra"
@@ -45,7 +46,7 @@ func (a *NSXApi) ListLoadBalancers() ([]model.LBService, error) {
 	cli := infra.NewLbServicesClient(a.connector)
 
 	for {
-		lbs, err := cli.List(cursor, &False, nil, nil, nil, nil)
+		lbs, err := cli.List(cursor, &config.False, nil, nil, nil, nil)
 		if err != nil {
 			a.log.WithError(err).Errorf("could not list LBs")
 			return nil, err
@@ -86,7 +87,7 @@ func (a *NSXApi) getLBServiceStatus(lbID string) (*model.LBServiceStatus, error)
 	a.log.Debugf("fetching status of LBService '%s'", lbID)
 
 	cli := lb_services.NewDetailedStatusClient(a.connector)
-	statuses, err := cli.Get(lbID, nil, &False, &RealTime, nil)
+	statuses, err := cli.Get(lbID, nil, &a.config.LBDetails, &a.config.LBSource, nil)
 	if err != nil {
 		a.log.WithError(err).Errorf("could not fetch LB '%s' status", lbID)
 		return nil, err
@@ -116,7 +117,7 @@ func (a *NSXApi) getLBServiceStats(lbID string) (*model.LBServiceStatistics, err
 	a.log.Debugf("fetching status of LBService '%s'", lbID)
 
 	cli := lb_services.NewStatisticsClient(a.connector)
-	stats, err := cli.Get(lbID, nil, &RealTime)
+	stats, err := cli.Get(lbID, nil, &config.RealTime)
 	if err != nil {
 		a.log.WithError(err).Errorf("could not fetch LB '%s' status", lbID)
 		return nil, err

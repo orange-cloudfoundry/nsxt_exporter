@@ -13,6 +13,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var (
+	RetryCodes = []int{429, 503}
+	False      = false
+	RealTime   = "realtime"
+	Cached     = "cached"
+)
+
 type logConfig struct {
 	Level   string `yaml:"level"`
 	InJSON  bool   `yaml:"in_json"`
@@ -107,6 +114,8 @@ type NSXConfig struct {
 	T1Filters      []string `yaml:"t1_filters"`
 	LBFilters      []string `yaml:"lb_filters"`
 	VSFilters      []string `yaml:"vs_filters"`
+	LBSource       string   `yaml:"lb_source"`
+	LBDetails      bool     `yaml:"lb_details"`
 }
 
 func (n *NSXConfig) NeedPasswordLogin() bool {
@@ -143,6 +152,9 @@ func (n *NSXConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	if n.MaxRetries == 0 {
 		n.MaxRetries = 3
+	}
+	if n.LBSource != RealTime {
+		n.LBSource = Cached
 	}
 	return nil
 }

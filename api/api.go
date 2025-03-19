@@ -3,33 +3,28 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/orange-cloudfoundry/nsxt_exporter/config"
+	"net/http"
+	"os"
+	"sync"
+
+	cfg "github.com/orange-cloudfoundry/nsxt_exporter/config"
 	log "github.com/sirupsen/logrus"
 	nsxt "github.com/vmware/go-vmware-nsxt"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/core"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/protocol/client"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/protocol/client/middleware/retry"
 	"github.com/vmware/vsphere-automation-sdk-go/runtime/security"
-	"net/http"
-	"os"
-	"sync"
-)
-
-var (
-	retryCodes = []int{429, 503}
-	False      = false
-	RealTime   = "realtime"
 )
 
 type NSXApi struct {
 	sync.Mutex
-	config    *config.NSXConfig
+	config    *cfg.NSXConfig
 	connector *client.RestConnector
 	client    *nsxt.APIClient
 	log       *log.Entry
 }
 
-func NewNSXApi(config *config.NSXConfig) (*NSXApi, error) {
+func NewNSXApi(config *cfg.NSXConfig) (*NSXApi, error) {
 	api := &NSXApi{
 		config: config,
 		log:    log.WithField("module", "api"),
@@ -44,7 +39,7 @@ func NewNSXApi(config *config.NSXConfig) (*NSXApi, error) {
 		MaxRetries:      config.MaxRetries,
 		RetryMinDelay:   0,
 		RetryMaxDelay:   500,
-		RetryOnStatuses: retryCodes,
+		RetryOnStatuses: cfg.RetryCodes,
 	}
 
 	host, err := config.NSXHost()
@@ -141,7 +136,7 @@ func (a *NSXApi) getNSXPolicyRetryFunc() retry.RetryFunc {
 	return func(retryContext retry.RetryContext) bool {
 		shouldRetry := false
 		if retryContext.Response != nil {
-			for _, code := range retryCodes {
+			for _, code := range cfg.RetryCodes {
 				if retryContext.Response.StatusCode == code {
 					a.log.Debugf("retrying request due to error code %d", code)
 					shouldRetry = true

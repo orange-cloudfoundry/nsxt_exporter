@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/orange-cloudfoundry/nsxt_exporter/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/tier_1s"
@@ -16,7 +17,7 @@ func (a *NSXApi) ListT1() ([]model.Tier1, error) {
 	cli := infra.NewTier1sClient(a.connector)
 
 	for {
-		lbs, err := cli.List(cursor, &False, nil, nil, nil, nil)
+		lbs, err := cli.List(cursor, &config.False, nil, nil, nil, nil)
 		if err != nil {
 			a.log.WithError(err).Errorf("could not list T1 gateways")
 			return nil, err
