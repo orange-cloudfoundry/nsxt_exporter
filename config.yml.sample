@@ -28,6 +28,10 @@ nsxt:
   # generate metrics only for given load balancer services. Get all load balancer when empty
   lb_filters:
     - my-lb
+  # set the source parameter (cached or realtime) when calling the nsxt api to retrieve the lb status (optional, default cached)
+  lb_source: cached
+  # set the include_instance_details parameter (false or true) when calling the nsxt api to retrieve the lb status (optional, default false) 
+  lb_details: false
 
 exporter:
   # exporter metric namespace
