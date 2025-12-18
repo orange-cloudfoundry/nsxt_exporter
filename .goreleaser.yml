@@ -1,3 +1,5 @@
+version: 2
+
 project_name: nsxt_exporter
 
 builds:
@@ -26,14 +28,14 @@ builds:
 archives:
   - id: archives
     builds: [binary]
-    format: "tar.gz"
+    formats: ['tar.gz']
     name_template: '{{ .ProjectName }}_{{ .Version }}.{{ .Os }}-{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
     wrap_in_directory: true
     files:
       - LICENSE
     format_overrides:
       - goos: windows
-        format: zip
+        formats: ['zip']
 
 changelog:
   sort: asc
