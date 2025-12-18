@@ -25,7 +25,7 @@ archives:
   - id: archives
     ids: [binary]
     formats: ['tar.gz']
-    name_template: '{{ .ProjectName }}_{{ .Version }}.{{ .Os }}-{{ .Arch }}'
+    name_template: '{{ .ProjectName }}_{{ .Version }}.{{ .Os }}-{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
     wrap_in_directory: true
     files:
       - LICENSE
