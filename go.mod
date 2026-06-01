@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.67.5
+	github.com/prometheus/common v0.68.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/vmware/go-vmware-nsxt v0.0.0-20230223012718-d31b8a1ca05e
 	github.com/vmware/vsphere-automation-sdk-go/runtime v0.8.0
@@ -29,9 +29,8 @@ require (
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/vmware/vsphere-automation-sdk-go/lib v0.8.0 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
