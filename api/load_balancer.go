@@ -9,7 +9,6 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/lb_services"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
-	"golang.org/x/exp/slices"
 )
 
 type LBInfo struct {
@@ -54,8 +53,8 @@ func (a *NSXApi) ListLoadBalancers() ([]model.LBService, error) {
 
 		for _, cRes := range lbs.Results {
 			empty := len(a.config.LBFilters) == 0
-			hasName := slices.Contains(a.config.LBFilters, *cRes.DisplayName)
-			hasID := slices.Contains(a.config.LBFilters, *cRes.Id)
+			hasName := containsString(a.config.LBFilters, *cRes.DisplayName)
+			hasID := containsString(a.config.LBFilters, *cRes.Id)
 			log.Debugf("found LB service '%s' (%s)", *cRes.DisplayName, *cRes.Id)
 			if empty || hasName || hasID {
 				res = append(res, cRes)

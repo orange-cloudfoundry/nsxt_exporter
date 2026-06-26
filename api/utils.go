@@ -10,6 +10,16 @@ func PathToID(path string) string {
 	return parts[len(parts)-1]
 }
 
+func containsString(haystack []string, needle string) bool {
+	for _, candidate := range haystack {
+		if candidate == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
 func search[T any](reader func(T) string, needle string, array []T) (*T, error) {
 	for cIdx := 0; cIdx < len(array); cIdx++ {
 		if reader(array[cIdx]) == needle {
