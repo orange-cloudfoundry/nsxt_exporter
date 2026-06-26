@@ -6,7 +6,6 @@ import (
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/infra/tier_0s"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
-	"golang.org/x/exp/slices"
 )
 
 func (a *NSXApi) ListT0() ([]model.Tier0, error) {
@@ -25,8 +24,8 @@ func (a *NSXApi) ListT0() ([]model.Tier0, error) {
 
 		for _, cRes := range lbs.Results {
 			empty := len(a.config.T0Filters) == 0
-			hasName := slices.Contains(a.config.T0Filters, *cRes.DisplayName)
-			hasID := slices.Contains(a.config.T0Filters, *cRes.Id)
+			hasName := containsString(a.config.T0Filters, *cRes.DisplayName)
+			hasID := containsString(a.config.T0Filters, *cRes.Id)
 			if empty || hasName || hasID {
 				log.Debugf("found tier0 gateway '%s' (%s)", *cRes.DisplayName, *cRes.Id)
 				res = append(res, cRes)
