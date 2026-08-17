@@ -47,8 +47,8 @@ github.com/prometheus/common/version
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/sirupsen/logrus v1.9.4
-## explicit; go 1.17
+# github.com/sirupsen/logrus v1.10.0
+## explicit; go 1.23
 github.com/sirupsen/logrus
 # github.com/vmware/go-vmware-nsxt v0.0.0-20260605141659-71d9620e9c4e
 ## explicit; go 1.25.9
