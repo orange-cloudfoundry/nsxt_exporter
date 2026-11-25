@@ -49,21 +49,23 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
-dockers:
-  - goos: linux
-    goarch: amd64
-    dockerfile: ./Dockerfile
-    image_templates:
-      - "orangeopensource/nsxt-exporter:latest"
-      - "orangeopensource/nsxt-exporter:{{ .Tag }}"
-      - "orangeopensource/nsxt-exporter:v{{ .Major }}"
-      - "orangeopensource/nsxt-exporter:v{{ .Major }}.{{ .Minor }}"
-    build_flag_templates:
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+dockers_v2:
+  - dockerfile: ./Dockerfile
+    images:
+      - "orangeopensource/nsxt-exporter"
+    tags:
+      - "latest"
+      - "{{ .Tag }}"
+      - "v{{ .Major }}"
+      - "v{{ .Major }}.{{ .Minor }}"
+    platforms:
+      - linux/amd64
+    labels:
+      org.opencontainers.image.created: "{{ .Date }}"
+      org.opencontainers.image.title: "{{ .ProjectName }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.source: "{{ .GitURL }}"
 
 release:
   prerelease: auto
